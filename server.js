@@ -161,8 +161,6 @@ app.post('/api/assistants/:id/messages', async (req, res) => {
 
 // Serve static files after build
 
-const __dirname = path.resolve();
-
 app.use(express.static(path.join(__dirname, 'dist')));
 app.get('*', (_, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
