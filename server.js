@@ -2,13 +2,20 @@ import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+
+import { fileURLToPath } from 'url';
+
 import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const DATA_FILE = './assistants.json';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_FILE = path.join(__dirname, 'assistants.json');
+
 
 function loadAssistants() {
   try {
@@ -153,7 +160,9 @@ app.post('/api/assistants/:id/messages', async (req, res) => {
 });
 
 // Serve static files after build
+
 const __dirname = path.resolve();
+
 app.use(express.static(path.join(__dirname, 'dist')));
 app.get('*', (_, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
