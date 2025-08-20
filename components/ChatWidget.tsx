@@ -1,17 +1,16 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChatMessage, OpenAIThreadMessage } from '../types';
-import { createThread, addMessageToThread, createRun, pollRunStatus, getThreadMessages } from '../services/openaiService';
+import { ChatMessage } from '../types';
+import { createThread, sendMessage } from '../services/backendService';
 import { ChatIcon } from './icons/ChatIcon';
 import { CloseIcon } from './icons/CloseIcon';
 import { SendIcon } from './icons/SendIcon';
 
 interface ChatWidgetProps {
-  apiKey: string;
-  assistantId: string;
+  assistantId: string; // backend-stored assistant id
 }
 
-const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, assistantId }) => {
+const ChatWidget: React.FC<ChatWidgetProps> = ({ assistantId }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -21,19 +20,17 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, assistantId }) => {
 
   useEffect(() => {
     const initThread = async () => {
-      if (!threadId && apiKey) {
+      if (!threadId) {
         try {
-          const thread = await createThread(apiKey);
+          const thread = await createThread(assistantId);
           setThreadId(thread.id);
         } catch (error) {
           console.error('Failed to create thread:', error);
-          // Optional: add a message to UI about the error
         }
       }
     };
     initThread();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiKey]);
+  }, [assistantId, threadId]);
   
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -49,20 +46,13 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKey, assistantId }) => {
     setIsLoading(true);
 
     try {
-      await addMessageToThread(apiKey, threadId, userMessage.content);
-      const run = await createRun(apiKey, threadId, assistantId);
-      await pollRunStatus(apiKey, threadId, run.id);
-      
-      const newMessages = await getThreadMessages(apiKey, threadId);
-      const assistantResponses = newMessages
-        .filter((msg: OpenAIThreadMessage) => msg.run_id === run.id && msg.role === 'assistant')
-        .map((msg: OpenAIThreadMessage) => ({
-          id: msg.id,
-          role: 'assistant' as const,
-          content: msg.content[0].type === 'text' ? msg.content[0].text.value : 'Unsupported content type',
-        }));
-        
-      setMessages(prev => [...prev, ...assistantResponses.reverse()]);
+      const response = await sendMessage(assistantId, threadId, userMessage.content);
+      const assistantResponses = response.messages.map((content: string, index: number) => ({
+        id: `assistant-${Date.now()}-${index}`,
+        role: 'assistant' as const,
+        content,
+      }));
+      setMessages(prev => [...prev, ...assistantResponses]);
 
     } catch (error) {
       console.error('Chat error:', error);

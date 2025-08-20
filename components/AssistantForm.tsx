@@ -1,9 +1,8 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { v4 as uuidv4 } from 'uuid';
 import { AssistantConfig } from '../types';
-import { createAssistant } from '../services/openaiService';
+import { createOrRegisterAssistant } from '../services/backendService';
 
 interface AssistantFormProps {
   onAddAssistant: (assistant: AssistantConfig) => void;
@@ -24,25 +23,26 @@ const AssistantForm: React.FC<AssistantFormProps> = ({ onAddAssistant }) => {
     setIsLoading(true);
     setError(null);
     try {
-      let finalAssistantId = assistantId;
+      let payload: any = { apiKey: openAIApiKey };
       if (formType === 'new') {
         if (!name || !description || !openAIApiKey) {
           throw new Error('Name, description, and API Key are required for a new assistant.');
         }
-        const newAssistant = await createAssistant(openAIApiKey, name, description);
-        finalAssistantId = newAssistant.id;
+        payload.name = name;
+        payload.description = description;
       } else {
         if (!assistantId || !openAIApiKey) {
           throw new Error('Assistant ID and API Key are required for an existing assistant.');
         }
+        payload.assistantId = assistantId;
       }
 
+      const saved = await createOrRegisterAssistant(payload);
       const newConfig: AssistantConfig = {
-        id: uuidv4(),
-        name: name || `Assistant ${finalAssistantId.slice(0, 6)}`,
-        description: description || 'An existing OpenAI Assistant',
-        openAIApiKey,
-        assistantId: finalAssistantId,
+        id: saved.id,
+        name: saved.name || name || `Assistant ${saved.assistantId.slice(0,6)}`,
+        description: saved.description || description || 'An existing OpenAI Assistant',
+        assistantId: saved.assistantId,
       };
       onAddAssistant(newConfig);
       navigate(`/assistant/${newConfig.id}`);
