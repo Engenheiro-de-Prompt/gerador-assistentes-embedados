@@ -7,6 +7,16 @@ import { fileURLToPath } from 'url';
 
 import { v4 as uuidv4 } from 'uuid';
 
+async function getFetch() {
+  if (globalThis.fetch) return globalThis.fetch;
+  try {
+    const { default: fetch } = await import('node-fetch');
+    return fetch;
+  } catch {
+    throw new Error('Fetch API is not available. Please upgrade Node or install node-fetch.');
+  }
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -40,6 +50,7 @@ app.post('/api/assistants', async (req, res) => {
   let finalDescription = description;
 
   try {
+    const fetch = await getFetch();
     if (!assistantId) {
       if (!name || !description)
         return res.status(400).json({ error: 'name and description are required when creating a new assistant' });
@@ -91,6 +102,7 @@ app.post('/api/assistants/:id/threads', async (req, res) => {
   const config = assistants[req.params.id];
   if (!config) return res.status(404).json({ error: 'Assistant not found' });
   try {
+    const fetch = await getFetch();
     const response = await fetch('https://api.openai.com/v1/threads', {
       method: 'POST',
       headers: {
@@ -120,6 +132,7 @@ app.post('/api/assistants/:id/messages', async (req, res) => {
     'OpenAI-Beta': 'assistants=v2'
   };
   try {
+    const fetch = await getFetch();
     let response = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
       method: 'POST',
       headers,
@@ -160,8 +173,6 @@ app.post('/api/assistants/:id/messages', async (req, res) => {
 });
 
 // Serve static files after build
-
-const __dirname = path.resolve();
 
 app.use(express.static(path.join(__dirname, 'dist')));
 app.get('*', (_, res) => {
