@@ -1,21 +1,34 @@
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
-import useLocalStorage from '../hooks/useLocalStorage';
 import { AssistantConfig } from '../types';
 import CodeSnippet from '../components/CodeSnippet';
+import { fetchAssistant } from '../services/backendService';
 
 const AssistantPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [assistants] = useLocalStorage<AssistantConfig[]>('assistants', []);
+  const [assistant, setAssistant] = useState<AssistantConfig | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
-  const assistant = useMemo(() => assistants.find(a => a.id === id), [assistants, id]);
+  useEffect(() => {
+    if (id) {
+      fetchAssistant(id)
+        .then(setAssistant)
+        .catch(() => setNotFound(true));
+    }
+  }, [id]);
 
-  if (!assistant) {
+  if (notFound) {
     return <Navigate to="/" />;
   }
 
-  const chatUrl = `${window.location.origin}${window.location.pathname}#/chat/${assistant.id}`;
+  if (!assistant) {
+    return (
+      <main className="container mx-auto px-6 py-12 text-white">Loading...</main>
+    );
+  }
+
+  const chatUrl = `${window.location.origin}/#/chat/${assistant.id}`;
   const embedCode = `<iframe
   src="${chatUrl}"
   width="400"
