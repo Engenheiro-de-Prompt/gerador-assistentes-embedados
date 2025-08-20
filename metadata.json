@@ -1,0 +1,5 @@
+{
+  "name": "OpenAI Assistant Proxy Generator",
+  "description": "Create and manage embeddable chatbot widgets powered by OpenAI Assistants. This tool acts as a configuration hub, generating the necessary code to deploy a floating chat popup on any website, while handling API interactions.",
+  "requestFramePermissions": []
+}
